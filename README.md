@@ -19,8 +19,8 @@
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/yourusername/your-repo-name.git
-   cd your-repo-name
+   git clone https://github.com/tangqz/material-collect-system.git
+   cd material-collect-system
    ```
 
 2. 创建虚拟环境：
