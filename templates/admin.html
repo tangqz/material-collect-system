@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">管理员登录</h4>
+                </div>
+                <div class="card-body">
+                    {% if admin_logged_in %}
+                        <div class="text-center">
+                            <a href="{{ url_for('download_all', admin='true') }}" class="btn btn-success btn-lg">
+                                <i class="fas fa-download"></i> 下载所有提交
+                            </a>
+                        </div>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('admin_login') }}">
+                            {{ form.hidden_tag() }}
+                            <div class="form-group">
+                                {{ form.password.label }}
+                                {{ form.password(class="form-control") }}
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.password.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">登录</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

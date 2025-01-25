@@ -1,0 +1,9 @@
+.progress-bar-custom {
+    width: 0;
+    min-width: 2em;
+    transition: width 0.5s ease;
+}
+
+.progress-bar-custom[data-progress] {
+    width: var(--progress-width);
+}
