@@ -55,7 +55,8 @@
 2. 访问系统：
    - 学生提交页面：http://localhost:5000/submit
    - 状态查看页面：http://localhost:5000/status
-   - 管理员页面：http://localhost:5000/admin
+   - 管理员页面：http://localhost:5000/admin  
+* Dockerfile 已准备好，但可能有点小问题。如有需要请自行 debug。
 
 ## 注意事项
 1. 部署前请确保：
