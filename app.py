@@ -24,7 +24,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # 读取学生名单
 try:
-    students_df = pd.read_csv('backend/config/students.xlsx')
+    students_df = pd.read_csv('backend/config/students.csv')
     students = students_df.to_dict('records')
 except FileNotFoundError:
     raise Exception("Students configuration file not found at backend/config/students.csv")
