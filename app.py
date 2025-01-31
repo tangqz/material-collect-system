@@ -9,7 +9,7 @@ import os
 import shutil
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -24,7 +24,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # 读取学生名单
 try:
-    students_df = pd.read_csv('backend/config/students.csv')
+    students_df = pd.read_csv('backend/config/students.xlsx')
     students = students_df.to_dict('records')
 except FileNotFoundError:
     raise Exception("Students configuration file not found at backend/config/students.xlsx")
@@ -62,9 +62,12 @@ def get_status():
             # Get latest file modification time
             files = [os.path.join(folder_path, f) for f in os.listdir(folder_path)]
             if files:
-                last_submit_time = datetime.fromtimestamp(
-                    max(os.path.getmtime(f) for f in files)
-                ).strftime('%Y-%m-%d %H:%M:%S')
+                # 获取文件修改时间戳
+                max_mtime = max(os.path.getmtime(f) for f in files)
+                # 将时间戳转换为 datetime 对象（UTC）
+                utc_time = datetime.utcfromtimestamp(max_mtime)
+                # 调整为东8区时间
+                last_submit_time = (utc_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
         status_list.append({
             'student_id': student_id,
             'name': student['name'],
@@ -76,6 +79,13 @@ def get_status():
 def validate_student(student_id, name):
     student = next((s for s in students if s['student_id'] == student_id), None)
     return student and student['name'] == name
+
+def adjust_time_for_timezone(dt):
+    """
+    将时间的小时数加8，并处理进位（例如，超过24小时的情况）。
+    """
+    adjusted_dt = dt + timedelta(hours=8)
+    return adjusted_dt
 
 @app.route('/', methods=['GET'])
 def index():
@@ -94,7 +104,9 @@ def submit():
             
         file = form.file.data
         # 使用时间戳重命名文件
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        current_time = datetime.now()
+        adjusted_time = adjust_time_for_timezone(current_time)  # 调整时区
+        timestamp = adjusted_time.strftime('%Y%m%d_%H%M%S')
         ext = os.path.splitext(file.filename)[1].lower()
         filename = f"{timestamp}{ext}"
         temp_path = os.path.join(tempfile.gettempdir(), filename)
@@ -135,7 +147,7 @@ def status():
 def admin_login():
     form = AdminForm()
     if form.validate_on_submit():
-        if form.password.data.strip() == os.getenv('ADMIN_PASSWORD'):
+        if form.password.data.strip() == "admin123":
             return render_template('admin.html', form=form, admin_logged_in=True)
         else:
             flash('密码错误', 'danger')
@@ -180,7 +192,9 @@ def _download_all():
                     app.logger.error(f'临时文件删除失败: {str(e)}')
 
     response = Response(generate(), mimetype='application/zip')
-    response.headers['Content-Disposition'] = f'attachment; filename=submissions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+    current_time = datetime.now()
+    adjusted_time = adjust_time_for_timezone(current_time)  # 调整时区
+    response.headers['Content-Disposition'] = f'attachment; filename=submissions_{adjusted_time.strftime("%Y%m%d_%H%M%S")}.zip'
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'
     response.headers['Connection'] = 'keep-alive'
     response.headers['X-Accel-Buffering'] = 'no'  # 禁用代理缓冲
