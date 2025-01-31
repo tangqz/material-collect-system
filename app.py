@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv()
-
+ 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 app.config['UPLOAD_FOLDER'] = '/uploads'
