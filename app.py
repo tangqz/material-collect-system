@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, jsonify
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FileField, IntegerField
 from wtforms.validators import DataRequired, NumberRange, ValidationError
@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv()
- 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 app.config['UPLOAD_FOLDER'] = '/uploads'
@@ -24,10 +24,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # 读取学生名单
 try:
-    students_df = pd.read_csv('backend/config/students.csv')
+    students_df = pd.read_csv('backend/config/students.xlsx')
     students = students_df.to_dict('records')
 except FileNotFoundError:
-    raise Exception("Students configuration file not found at backend/config/students.csv")
+    raise Exception("Students configuration file not found at backend/config/students.xlsx")
 except Exception as e:
     raise Exception(f"Error reading students file: {str(e)}")
 
@@ -98,9 +98,10 @@ def submit():
         student_id = form.student_id.data
         name = form.name.data
         
+        # 验证学号和姓名是否匹配
         if not validate_student(student_id, name):
             flash('学号和姓名不匹配', 'danger')
-            return redirect(url_for('submit'))
+            return jsonify({'success': False, 'message': '学号和姓名不匹配'}), 400
             
         file = form.file.data
         # 使用时间戳重命名文件
@@ -115,27 +116,35 @@ def submit():
         try:
             folder_name = f"{student_id}_{name}"
             target_folder = os.path.join(app.config['UPLOAD_FOLDER'], folder_name)
+            overwrite = False
+            
             # 如果文件夹已存在，先删除旧文件
             if os.path.exists(target_folder):
                 flash('检测到已有提交，将覆盖之前的文件。', 'warning')
                 shutil.rmtree(target_folder)
+                overwrite = True
                 
             os.makedirs(target_folder, exist_ok=True)
             final_path = os.path.join(target_folder, filename)
             shutil.move(temp_path, final_path)
             flash('提交已完成。', 'success')
+            return jsonify({
+                'success': True,
+                'message': '提交已完成',
+                'overwrite': overwrite  # 返回是否覆盖的标志
+            })
         except Exception as e:
             flash(f'文件处理失败: {str(e)}', 'danger')
-            # 如果移动失败，保留临时文件以便调试
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            return jsonify({
+                'success': False,
+                'message': f'文件处理失败: {str(e)}'
+            }), 500
         finally:
             # 确保文件存在才删除
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            
-        return redirect(url_for('submit'))
     
+    # 如果是 GET 请求或表单验证失败，渲染页面
     return render_template('submit.html', form=form)
 
 @app.route('/status')
@@ -147,7 +156,7 @@ def status():
 def admin_login():
     form = AdminForm()
     if form.validate_on_submit():
-        if form.password.data.strip() == os.getenv('ADMIN_PASSWORD'):
+        if form.password.data.strip() == "admin123":
             return render_template('admin.html', form=form, admin_logged_in=True)
         else:
             flash('密码错误', 'danger')
@@ -203,3 +212,4 @@ def _download_all():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
