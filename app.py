@@ -156,7 +156,7 @@ def status():
 def admin_login():
     form = AdminForm()
     if form.validate_on_submit():
-        if form.password.data.strip() == "admin123":
+        if form.password.data.strip() == os.getenv('ADMIN_PASSWORD'):
             return render_template('admin.html', form=form, admin_logged_in=True)
         else:
             flash('密码错误', 'danger')
