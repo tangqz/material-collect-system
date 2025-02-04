@@ -44,9 +44,109 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100">
+        <button type="submit" class="btn btn-primary w-100" id="submit-btn">
             <i class="fas fa-upload me-2"></i>提交材料
         </button>
     </form>
+
+    <!-- 添加进度条和状态提示 -->
+    <div class="progress mt-4" style="height: 20px; display: none;" id="progress-container">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+             role="progressbar" 
+             style="width: 0%;" 
+             id="progress-bar">
+            0%
+        </div>
+    </div>
+    <div id="upload-status" class="mt-2 text-center"></div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submit-btn');
+    const progressBar = document.getElementById('progress-bar');
+    const progressContainer = document.getElementById('progress-container');
+    const uploadStatus = document.getElementById('upload-status');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 禁用提交按钮
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>提交中...';
+        progressContainer.style.display = 'block';
+        uploadStatus.textContent = '';
+        uploadStatus.className = 'mt-2 text-center';
+
+        const formData = new FormData(form);
+        const xhr = new XMLHttpRequest();
+
+        // 进度更新处理
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.textContent = percent + '%';
+            }
+        });
+
+        // 请求完成处理
+        xhr.addEventListener('load', function() {
+    try {
+        const response = JSON.parse(xhr.responseText);
+        if (xhr.status === 200 && response.success) {
+            if (response.overwrite) {
+                // 显示覆盖提醒
+                uploadStatus.className = 'mt-2 text-center text-warning';
+                uploadStatus.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>检测到已有提交，已覆盖之前的文件。';
+            } else {
+                // 显示成功提示
+                uploadStatus.className = 'mt-2 text-center text-success';
+                uploadStatus.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + response.message;
+            }
+            setTimeout(() => {
+                window.location.reload(); // 刷新页面更新状态
+            }, 1500);
+        } else {
+            // 显示错误提示
+            showError(response.message || '上传失败');
+        }
+    } catch (error) {
+        showError('服务器响应异常');
+    }
+    resetUI();
+});
+
+        // 错误处理
+        xhr.addEventListener('error', function() {
+            showError('网络连接失败，请检查网络后重试');
+            resetUI();
+        });
+
+        xhr.open('POST', "{{ url_for('submit') }}");
+        xhr.send(formData);
+    });
+
+    function showError(message) {
+        uploadStatus.className = 'mt-2 text-center text-danger';
+        uploadStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>' + message;
+    }
+
+    function resetUI() {
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>提交材料';
+    }
+});
+</script>
+
+<style>
+.progress-bar {
+    transition: width 0.3s ease;
+    min-width: 2em;
+}
+</style>
 {% endblock %}
